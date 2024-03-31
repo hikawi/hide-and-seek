@@ -128,7 +128,7 @@ A step is defined as a movement in any of the 8 directions, or staying in place.
 
 These two levels are basically the same, with the only difference being the number of hiders. In level 1, there is only 1 hider, while in level 2, there are multiples.
 
-![Demo](./docs/level2demo.mov)
+![Demo](./docs/level2demo.gif)
 
 ### Level 3
 
