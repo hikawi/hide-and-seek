@@ -11,16 +11,20 @@ def playout(game_map_path: str) -> None:
     game = game_from_file(game_map_path)
 
     while True:
-        game.print_rep()
-        if game.terminal_score() == 1:
-            print(f"Seeker has won! Score: {game.score}!")
-            break
-        elif game.terminal_score() == -1:
-            print(f"Hiders have won! Score: {game.score}!")
-            break
+        try:
+            game.print_rep()
+            if game.terminal_score() == 1:
+                print(f"Seeker has won! Score: {game.score}!")
+                break
+            elif game.terminal_score() == -1:
+                print(f"Hiders have won! Score: {game.score}!")
+                break
 
-        input()
-        game.tick()
+            input()
+            game.tick()
+        except ValueError:
+            print("Game over! The seeker has given up.")
+            break
 
 
 def main() -> None:

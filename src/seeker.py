@@ -92,7 +92,8 @@ class Seeker(Agent):
                 heapq.heappush(open_set,
                                (tent + self.heuristic(new_pos, goals), new_pos))
                 parents[new_pos] = current
-        return vector(0, 0)
+
+        raise ValueError("Come on bro.")
 
     def accept(self) -> vector:
         """Accepts the current world state. Returns the NEXT direction it takes."""
