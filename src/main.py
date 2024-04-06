@@ -1,9 +1,4 @@
-from agent import Agent
-from map_state import MapState, CellType
-from vector2d import vector
-from hide_and_seek import Game, game_from_file
-
-INT_INF = 1_000_000_000
+from hide_and_seek import game_from_file
 
 
 def playout(game_map_path: str) -> None:
@@ -28,8 +23,12 @@ def playout(game_map_path: str) -> None:
 
 
 def main() -> None:
-    # playout("./maps/l1_m1.txt") # LEVEL 1, MAP 1
-    playout("./maps/l2_m2.txt")
+    while True:
+        print("  Hide and Seek")
+        map_path = input("Play map: ")
+        if map_path == "quit":
+            break
+        playout(map_path)
 
 
 if __name__ == "__main__":

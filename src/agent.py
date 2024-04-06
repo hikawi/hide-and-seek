@@ -1,6 +1,9 @@
 from vector2d import vector
 from map_state import MapState, CellType
 
+DIRECTIONS = [vector(x, y) for x in range(-1, 2)
+              for y in range(-1, 2) if (x, y) != (0, 0)]
+
 
 class Agent:
     """Represents an abstract agent that may move, and can see a certain distance."""
@@ -9,8 +12,9 @@ class Agent:
     vision_range: int
     heatmap: list[list[int]]
     view: MapState
+    max_step: int
 
-    def __init__(self, pos: vector, vision_range: int, view: MapState) -> None:
+    def __init__(self, pos: vector, vision_range: int, view: MapState, max_step: int) -> None:
         """Initializes a general agent, with starting point pos,
            limited vision range vision_range, and the dimensions of the map."""
         self.position = pos
@@ -18,11 +22,26 @@ class Agent:
         self.view = view
         self.heatmap = [[0 for _ in range(view.width)]
                         for _ in range(view.height)]
+        self.max_step = max_step
 
-    def get_perceivables(self) -> list[vector]:
+    def get_neighbors(self, at: vector, radius: int) -> list[vector]:
         """Returns the positions in the NxN grid around the agent."""
-        return [vector(x, y) for x in range(self.position.x - self.vision_range, self.position.x + self.vision_range + 1)
-                for y in range(self.position.y - self.vision_range, self.position.y + self.vision_range + 1)]
+        return [vector(x, y) for x in range(at.x - radius, at.x + radius + 1)
+                for y in range(at.y - radius, at.y + radius + 1)]
+
+    def get_moveset(self, at: vector) -> list[vector]:
+        """Retrieves the moveset at a certain position, with the agent's max step."""
+        current: list[vector] = [at]
+        for _ in range(self.max_step):
+            new = []
+            for pos in current:
+                for move in DIRECTIONS:
+                    new_pos = pos + move
+                    if self.view[new_pos] == CellType.WALL or self.view[new_pos] == CellType.BORDER:
+                        continue
+                    new.append(new_pos)
+            current = list(set(new))
+        return current
 
     def move(self, direction: vector) -> bool:
         """Attempts to move the current agent in the direction dir. 

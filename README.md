@@ -21,17 +21,26 @@ Project Structure Overview:
 ```
 .
 |-- src
-    |-- agent.py (The generic abstract class for an agent, contains heatmap, internal state, and vision)
-    |-- hide_and_seek.py (The game environment, contains the game tick loop and manages seekers and hiders)
-    |-- hider.py (The hider agent, contains the hider's logic)
-    |-- seeker.py (The seeker agent, contains the seeker's logic)
-    |-- map_state.py (The map state, contains ONLY the map. The map DOES NOT have seekers and hiders on it)
-    |-- vector2d.py (Contains 2 class, a 2D vector containing floats, and a 2D vector containing integers)
-    |-- main.py (The main file, contains the game loop)
-|-- test
-    |-- level1 (Contains the test cases for level 1)
-    |-- vision_test.txt (Contains the test cases for the vision of the agents)
+    |-- agent.py
+    |-- hide_and_seek.py
+    |-- hider.py
+    |-- seeker.py
+    |-- map_state.py
+    |-- vector2d.py
+    |-- main.py
+|-- maps
+    |-- lX_mY.txt
+    |-- ...
 ```
+
+Where:
+
+- `agent.py` contains the base class for an agent, including the moveset and vision.
+- `hide_and_seek.py` contains the board, manages the positions for agents, can check whether the game is over.
+- `hider.py` contains the hider class, which is a subclass of the agent class. Contains some additional methods for the hider.
+- `seeker.py` contains the seeker class, which is a subclass of the agent class. Contains some additional methods for the seeker.
+- `map_state.py` contains the map state class, which is a representation of the map itself.
+- `vector2d.py` contains the `vector` class and `vectorf` class, which are basically tuples of 2 integers and 2 floats, respectively. The integer version is used for each cell in the map, while the float version is used for calculating raytracing.
 
 ## Structural Integrity
 
@@ -90,9 +99,9 @@ The game is played accordingly:
 
 1. Check if the game is over (time limit reached, or all hiders caught). If it is over, go to step 6.
 2. Tick the seeker. The seeker looks around itself, updates its internal state, and moves.
-3. Tick the hiders. The hiders look around themselves, update their internal state, and move (if possible). The view of the hiders is _not_ updated yet with the seeker's new position.
-4. The score and time is ticked. Score gets deducted by 1 for each step. Time gets incremented by 1 for each step. If the time limit is reached, the game is over.
-5. Tick the game board. Update the _true_ view, with the actual positions of the agents. Check if the seeker caught any hiders, and update accordingly.
+3. Tick the game board. Check if the seeker overlaps _any_ hiders, if it does, the hider is caught. Update the game board accordingly.
+4. Tick the hiders. The _remaining_ hiders look around themselves, update their internal state, and move (if possible).
+5. The score and time is ticked. Score gets deducted by 1 for each step. Time gets incremented by 1 for each step. If the time limit is reached, the game is over. For each hider the seeker caught in this _tick_, the score gets increased by `20`.
 6. Finished 1 state. Wait for next tick.
 
 The game board is displayed with the following characters:
@@ -103,7 +112,7 @@ The game board is displayed with the following characters:
 - `X` is a _immovable_ wall.
 - `☐` is a _movable_ box.
 - `-` is what the seeker can see.
-- `+` is the _alert flare_.
+- `*` is the _alert flare_.
 
 ## Seeker
 
@@ -114,7 +123,7 @@ The game board is displayed with the following characters:
 
 A step is defined as a movement in any of the 8 directions, or staying in place. The seeker goes through 2 stages: `perceive` and `accept`.
 
-- **Perception**: The seeker looks around, and checks cells it _can see_ (not blocked), and are valid (not WALL, not BORDER). It may ask the gamemaster whether a cell has a hider or not. If the cell is _empty_, it _cools down_ the cell. If the cell has a hider, it _heats up_ the cell.
+- **Perception**: The seeker looks around, and checks cells it _can see_ (not blocked), and are valid (not WALL, not BORDER). It may ask the gamemaster whether a cell has a hider or not. If the cell is _empty_, it _cools down_ the cell. If the cell has a hider, it _heats up_ the cell. If the cell is a hider, it heats up by A LOT. If there is a flare shot, a _region_ around the flare is _heated up_.
 - **Action**: The seeker checks its current state (the heatmap), and selects all cells with the _highest_ value (aka the hottest cells). It then runs a _multi A\*_ search from its current position, finds the first goal cell it can discover, and returns a direction to move to that cell.
 
 ## Hider

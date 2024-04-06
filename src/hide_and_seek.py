@@ -16,6 +16,7 @@ class Game:
     time_elapsed: int
     maximum_time: int
     flares: dict[vector, int]
+    turn: bool
 
     seeker: Seeker
     hiders: list[Hider]
@@ -23,9 +24,10 @@ class Game:
     def __init__(self, start: MapState, max_time: int) -> None:
         self.state = start
         self.time_elapsed = 0
-        self.score = 0
+        self.score = 50
         self.maximum_time = max_time
         self.flares = {}
+        self.turn = False
 
     def start_game(self, seeker: Seeker, hiders: list[Hider]) -> None:
         """Starts the game with the seeker and hiders."""
@@ -39,6 +41,10 @@ class Game:
                 return True
         return False
 
+    def is_there_seeker(self, pos: vector) -> bool:
+        """Checks if there is a seeker at the position pos."""
+        return self.seeker.position == pos
+
     def terminal_score(self) -> int:
         """Returns the score of the game, if the game is over."""
         if self.time_elapsed > self.maximum_time:
@@ -50,13 +56,15 @@ class Game:
     def tick_seeker(self) -> None:
         """Tells the seeker to move."""
         self.seeker.perceive(self)
-        next_dir = self.seeker.accept()
+        next_dir = self.seeker.accept(self)
         self.seeker.move(next_dir)
 
     def tick_hiders(self) -> None:
         """Tells the hiders to move."""
         for hider in self.hiders:
-            hider.accept(self)
+            hider.perceive(self)
+            next_dir = hider.accept(self)
+            hider.move(next_dir)
 
     def tick_score(self) -> None:
         """Ticks the score."""
@@ -66,6 +74,9 @@ class Game:
     def shoot_flare(self, where: vector, interval: int) -> None:
         """Shoots a flare at the position where."""
         self.seeker.perceive_flare(where)
+        for hider in self.hiders:
+            hider.perceive_flare(where)
+
         self.flares[where] = self.time_elapsed + interval
         print(f"Flare shot at {where} at {self.time_elapsed}s.")
 
@@ -96,8 +107,8 @@ class Game:
 
         self.tick_score()
         self.tick_seeker()
-        self.tick_hiders()
         self.check_world()
+        self.tick_hiders()
 
     def print_rep(self) -> None:
         """Prints the representation of the game."""
@@ -108,7 +119,7 @@ class Game:
         hiders = set([hider.position for hider in self.hiders])
 
         perceived = set(filter(lambda pos: self.seeker.can_see(pos),
-                        self.seeker.get_perceivables()))
+                        self.seeker.get_neighbors(self.seeker.position, self.seeker.vision_range)))
 
         for y in range(len(self.state.current_map)):
             for x in range(len(self.state.current_map[y])):
@@ -192,8 +203,9 @@ def game_from_file(file_path: str) -> Game:
 
         # Create the game.
         state = MapState(cells)
-        seeker_agent = Seeker(seeker, seeker_vision, state)
-        hider_agents = [Hider(hider, hider_vision, state) for hider in hiders]
+        seeker_agent = Seeker(seeker, seeker_vision, state, seeker_step)
+        hider_agents = [Hider(hider, hider_vision, state, hider_step)
+                        for hider in hiders]
         game = Game(state, time_limit)
         game.start_game(seeker_agent, hider_agents)
         return game

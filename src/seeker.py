@@ -10,9 +10,6 @@ if TYPE_CHECKING:
 import hider
 import heapq
 
-DIRECTIONS = [vector(1, 0), vector(-1, 0), vector(0, 1), vector(0, -1),
-              vector(1, 1), vector(-1, -1), vector(1, -1), vector(-1, 1)]
-
 
 class Seeker(Agent):
     """An agent that has a goal to FIND ALL hiders."""
@@ -29,17 +26,16 @@ class Seeker(Agent):
 
     def perceive(self, game: 'Game') -> None:
         """Perceives the world then updates the heatmap accordingly."""
-        for cell in self.get_perceivables():
+        for cell in self.get_neighbors(self.position, self.vision_range):
             # Uh oh, out of bounds.
             if self.view[cell] == CellType.BORDER or not self.can_see(cell):
                 continue
 
             # If there's a hider, increase the heat.
             if game.is_there_hider(cell):
-                self.heatmap[cell.y][cell.x] += 1
+                self.heatmap[cell.y][cell.x] = 10
             else:
                 self.heatmap[cell.y][cell.x] -= 1  # Cool down the cell.
-        self.log_heatmap()
 
     def perceive_flare(self, flare: vector) -> None:
         """A flare has been shot, update the heatmap accordingly."""
@@ -57,7 +53,7 @@ class Seeker(Agent):
         """Returns the heuristic value of the current position to the goal."""
         return min([cur.taxicab(goal) for goal in goals])
 
-    def multi_astar(self, goals: set[vector]) -> vector:
+    def multi_astar(self, game: 'Game', goals: set[vector]) -> vector:
         """Performs a breadth-first search to find the shortest path to ANY goal."""
 
         open_set: list[tuple[float, vector]] = [(0, self.position)]
@@ -69,33 +65,36 @@ class Seeker(Agent):
 
             # Found a goal, return the path.
             if current in goals:
-                print(f"Found goal at {current}.")
+                print(f"Found goal at {current} in {len(goals)} goals.")
                 path: list[vector] = []
                 while current != self.position:
                     path.append(current)
                     current = parents[current]
-                return path[-1] - self.position
+                return path[-1] - self.position if path else vector(0, 0)
 
             # Add all neighbors to the queue.
-            for direction in DIRECTIONS:
-                new_pos = current + direction
-                if self.view[new_pos] == CellType.WALL or self.view[new_pos] == CellType.BORDER:
+            for neighbor in self.get_moveset(current):
+                if self.view[neighbor] == CellType.WALL or self.view[neighbor] == CellType.BORDER:
                     continue
 
                 tent = g_score[current] + 1
-                if tent >= g_score.get(new_pos, float('inf')):
+                if tent >= g_score.get(neighbor, float('inf')):
                     continue
 
                 # Add the new position to the queue.
-                g_score[new_pos] = tent
-                parents[new_pos] = current
+                g_score[neighbor] = tent
+                parents[neighbor] = current
                 heapq.heappush(open_set,
-                               (tent + self.heuristic(new_pos, goals), new_pos))
-                parents[new_pos] = current
+                               (tent + self.heuristic(neighbor, goals), neighbor))
+                parents[neighbor] = current
 
+        # No path to go to where it wants to. Which means the map is enclosed
+        # in a way that the seeker can't look for all spots.
+        # May also handle this in a way that it looks for a different hotspot
+        # to go to instead. But I'm lazy.
         raise ValueError("Come on bro.")
 
-    def accept(self) -> vector:
+    def accept(self, game: 'Game') -> vector:
         """Accepts the current world state. Returns the NEXT direction it takes."""
         # Ravel the heatmap into a list.
         raveled = [cell for row in self.heatmap for cell in row]
@@ -106,5 +105,5 @@ class Seeker(Agent):
                                           for x in range(len(self.heatmap[y])) if self.heatmap[y][x] == highest_temp
                                           and self.view[vector(x, y)] == CellType.EMPTY])
 
-        direction = self.multi_astar(hottest_cells)
+        direction = self.multi_astar(game, hottest_cells)
         return direction
